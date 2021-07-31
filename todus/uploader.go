@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// Work in progress
 const (
 	host        string = "im.todus.cu"
 	port        int    = 1756
@@ -39,21 +40,21 @@ func sign_url(file_size int) (string, error) {
 
 	if err != nil {
 		fmt.Println("SSL Error : " + err.Error())
-		return errors.New("SSL Error")
+		return "", errors.New("SSL Error")
 	}
 
 	_, err = io.WriteString(conn, "<stream:stream xmlns='jc' o='im.todus.cu' xmlns:stream='x1' v='1.0'>")
 
 	if err != nil {
 		fmt.Println("Error iniciating " + err.Error())
-		return errors.New("error iniciating")
+		return "", errors.New("error iniciating")
 	}
 
 	reply := make([]byte, 1024*1024)
 	n, err := conn.Read(reply)
 	if err != nil {
 		fmt.Println("Error reading " + err.Error())
-		return errors.New("error reading ")
+		return "", errors.New("error reading ")
 	}
 	fmt.Printf("Recived %d bytes", n)
 
@@ -70,14 +71,14 @@ func sign_url(file_size int) (string, error) {
 
 			if err1 != nil || err2 != nil {
 				fmt.Println("Error reading " + err.Error())
-				return errors.New("error reading ")
+				return "", errors.New("error reading ")
 			}
 		}
 		if strings.HasPrefix(response, "<ed u='true' max=") {
 			_, err3 := io.WriteString(conn, fmt.Sprintf("<p i='%s-4'></p>", phone))
 			if err3 != nil {
 				fmt.Println("Error reading " + err.Error())
-				return errors.New("error reading ")
+				return "", errors.New("error reading ")
 			}
 		}
 
@@ -85,14 +86,11 @@ func sign_url(file_size int) (string, error) {
 			strings.Contains(response, "status='200'") {
 			r, _ := regexp.Compile(".*du='(.*)' stat.*")
 			res := r.FindString(response)
-			strings.ReplaceAll(res, "amp;", "")
+			return strings.ReplaceAll(res, "amp;", ""), nil
 		}
-
-		//return match.group(1).replace('amp;', '')
 
 	}
 
-	return nil
 }
 
 func negociate_start(response string, tls_conn *tls.Conn,
