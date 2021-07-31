@@ -1,0 +1,3 @@
+{"L":"ERROR","T":"2021-07-30T22:07:33.047-0400","C":"config/config.go:36","M":"failed to read config","error":"Config File \"config\" Not Found in \"[/media/hoax/h0ax/sad_cat/sadcat2]\""}
+{"L":"ERROR","T":"2021-07-30T22:09:50.180-0400","C":"config/config.go:36","M":"failed to read config","error":"Config File \"config.cfg\" Not Found in \"[/media/hoax/h0ax/sad_cat/sadcat2]\""}
+{"L":"ERROR","T":"2021-07-30T22:11:27.055-0400","C":"config/config.go:36","M":"failed to read config","error":"Config File \"config.cfg\" Not Found in \"[/media/hoax/h0ax/sad_cat/sadcat2]\""}
