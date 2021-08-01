@@ -1,17 +1,22 @@
 package todus
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
 	"math/rand"
+	"net/http"
+	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/machinebox/progress"
 	"golang.org/x/net/websocket"
 )
 
@@ -119,13 +124,13 @@ func negociate_start(response string, tls_conn *tls.Conn, authstr string, sid st
 	return false
 }
 
-func Sign_url(file_size int) (string, string, error) {
+func sign_url(file_size int64) (string, string, string, error) {
 
 	token, phone, err := steal_token()
 	sid := generate_sid(5)
 
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
 	authstr := fmt.Sprintf("\x00%s\x00%s", phone, token)
@@ -142,14 +147,14 @@ func Sign_url(file_size int) (string, string, error) {
 
 	if err != nil {
 		fmt.Println("SSL Error : " + err.Error())
-		return "", "", err
+		return "", "", "", err
 	}
 
 	_, err = io.WriteString(conn, "<stream:stream xmlns='jc' o='im.todus.cu' xmlns:stream='x1' v='1.0'>")
 
 	if err != nil {
 		fmt.Println("Error iniciating " + err.Error())
-		return "", "", errors.New("error iniciating")
+		return "", "", "", err
 	}
 
 	for {
@@ -159,7 +164,7 @@ func Sign_url(file_size int) (string, string, error) {
 
 		if err != nil {
 			fmt.Println("Error reading " + err.Error())
-			return "", "", errors.New("error reading ")
+			return "", "", "", err
 		}
 
 		var response string = string(reply[:n])
@@ -176,7 +181,7 @@ func Sign_url(file_size int) (string, string, error) {
 
 			if err1 != nil || err2 != nil {
 				fmt.Println("Error reading " + err.Error())
-				return "", "", errors.New("error reading ")
+				return "", "", "", err
 			}
 
 			continue
@@ -186,7 +191,7 @@ func Sign_url(file_size int) (string, string, error) {
 			_, err3 := io.WriteString(conn, fmt.Sprintf("<p i='%s-4'></p>", sid))
 			if err3 != nil {
 				fmt.Println("Error reading " + err.Error())
-				return "", "", errors.New("error reading ")
+				return "", "", "", err
 			}
 
 			continue
@@ -199,17 +204,77 @@ func Sign_url(file_size int) (string, string, error) {
 			res := r.FindAllStringSubmatch(response, -1)
 			up := strings.ReplaceAll(res[0][1], "amp;", "")
 			down := res[0][2]
-			return up, down, nil
+			return up, down, token, nil
 		}
 
 		if strings.Contains(response, "<not-authorized/>") {
-			return "", "", errors.New("not authorized")
+			return "", "", "", errors.New("not authorized")
 		}
 
 		if len(response) == 0 {
-			return "", "", errors.New("eof")
+			return "", "", "", errors.New("eof")
 		}
 
 	}
 
+}
+
+func Upload_File(filename string) (string, error) {
+	client := &http.Client{Timeout: 5 * time.Minute} //
+
+	data, err := os.Open(filename)
+
+	if err != nil {
+		fmt.Println("Unable to open file")
+		return "", err
+	}
+
+	info, err := data.Stat()
+
+	if err != nil {
+		fmt.Println("Unable to stat file")
+		return "", err
+	}
+
+	r := progress.NewReader(data)
+
+	go func() {
+		ctx := context.Background()
+		progressChan := progress.NewTicker(ctx, r, info.Size(), 1*time.Second)
+		for p := range progressChan {
+			fmt.Printf("\r%v remaining...", p.Remaining().Round(time.Second))
+		}
+		fmt.Println("\rdownload is completed")
+	}()
+
+	fmt.Println(info.Size())
+	up, down, token, err := sign_url(info.Size())
+
+	if err != nil {
+		fmt.Println("Unable to get upload url")
+		return "", err
+	}
+
+	req, err := http.NewRequest("PUT", up, r)
+	if err != nil {
+		fmt.Println("Unable to create http upload request")
+		return "", err
+	}
+
+	req.Header.Set("User-Agent", "ToDus 0.40.19 HTTP-Upload")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+	req.Header.Set("Accept-Encoding", "gzip")
+	req.Header.Set("Content-Type", "application/octet-stream")
+	req.Header.Set("Content-Length", strconv.FormatInt(info.Size(), 10))
+	fmt.Println(req.Header)
+	fmt.Println(token)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Unable to create http upload request")
+		return "", err
+	}
+	fmt.Println(resp)
+	fmt.Println(resp.Status)
+	return down, nil
 }

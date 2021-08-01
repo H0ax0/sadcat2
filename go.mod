@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/lib/pq v1.6.0 // indirect
+	github.com/machinebox/progress v0.2.0 // indirect
 	github.com/magiconair/properties v1.8.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/spf13/viper v1.3.2

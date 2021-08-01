@@ -28,10 +28,18 @@ func Test_steal_token(t *testing.T) {
 }
 
 func Test_Sign_url(t *testing.T) {
-	up, down, err := Sign_url(1050)
+	up, down, token, err := sign_url(1050)
 	fmt.Println(up)
 	fmt.Println(down)
 	require.NotEmpty(t, up)
+	require.NotEmpty(t, down)
+	require.NotEmpty(t, token)
+	require.NoError(t, err)
+}
+
+func Test_Upload(t *testing.T) {
+	down, err := Upload_File("/media/hoax/h0ax/test.mp3")
+	fmt.Println(down)
 	require.NotEmpty(t, down)
 	require.NoError(t, err)
 }
